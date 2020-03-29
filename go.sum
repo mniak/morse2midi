@@ -1,3 +1,5 @@
+github.com/algoGuy/EasyMIDI v0.0.0-20180322051653-708ca39e7399 h1:f0h3xTKQjrTzAUwqMJr1TY3lk3gTK8R4v7ZjcSMiwm8=
+github.com/algoGuy/EasyMIDI v0.0.0-20180322051653-708ca39e7399/go.mod h1:z6svyEeOasADFxg4gn6funK2OBjocr62B4J7ZPodCPs=
 github.com/alwindoss/morse v1.0.1 h1:PkUh5m1UHMcZ1Upvl7CmSIBMxdEBejWoQ4rQQtgJsCQ=
 github.com/alwindoss/morse v1.0.1/go.mod h1:qAqJOep3jEpIpiLgqSGgLk5Zh4BZKsyzMQHuAwVPMXc=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=

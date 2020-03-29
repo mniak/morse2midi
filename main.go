@@ -1,9 +1,15 @@
 package main
 
 import (
-	"fmt"
+	"bufio"
+	"log"
+	"os"
 	"strings"
 
+	"flag"
+
+	"github.com/algoGuy/EasyMIDI/smf"
+	"github.com/algoGuy/EasyMIDI/smfio"
 	"github.com/alwindoss/morse"
 )
 
@@ -16,75 +22,130 @@ func text2morse(text string) (string, error) {
 	return string(morseCode), nil
 }
 
-func morse2sequence(text string) (result []bool) {
-	words := strings.Split(text, "/")
-	for iword, word := range words {
-		chars := strings.Fields(word)
-		for ichar, char := range chars {
-			for isignal, signal := range char {
-				switch signal {
-				case '.':
-					result = append(result, true)
-				case '-':
-					result = append(result, true, true, true)
-				}
-				if isignal < len(char)-1 {
-					result = append(result, false)
-				}
-			}
-			if ichar < len(chars)-1 {
-				// End of char
-				result = append(result, false, false, false)
-			}
-		}
-		if iword < len(words)-1 {
-			// End of word
-			result = append(result, false, false, false, false, false, false, false)
-		}
-	}
-	fmt.Println()
-	return
-}
-
 type event struct {
-	When    int
-	HowLong int
+	Delta    int
+	Duration int
 }
 
-func morse2events(sequence []bool) (events []event) {
-	var on bool
-	var start int
-	for i, s := range sequence {
-		switch {
-		case s && !on: //start
-			start = i
-			on = true
-		case !s && on: //stop
-			events = append(events, event{
-				When:    start,
-				HowLong: i - start,
-			})
-			on = false
+func morse2events(morseCode string, norests bool) <-chan event {
+	out := make(chan event)
+	go func() {
+		var offset int
+		for i, x := range morseCode {
+			if norests {
+				switch x {
+				case '/':
+					fallthrough
+				case ' ':
+					offset = 1 + i - 2
+				case '.':
+					out <- event{
+						Delta:    i - offset,
+						Duration: 2,
+					}
+					offset = i + 1
+				case '-':
+					out <- event{
+						Delta:    i - offset,
+						Duration: 4,
+					}
+					offset = i + 1
+				}
+			} else {
+				switch x {
+				case '/':
+					offset = 1 + i - 1
+				case ' ':
+					offset = 1 + i - 3
+				case '.':
+					out <- event{
+						Delta:    i - offset,
+						Duration: 1,
+					}
+					offset = i
+				case '-':
+					out <- event{
+						Delta:    i - offset,
+						Duration: 3,
+					}
+					offset = i
+				}
+			}
 		}
-	}
-	return
+		close(out)
+	}()
+	return out
+}
+func parseArgs() (filepath, text string, norests bool) {
+	pathPtr := flag.String("file", "morse.mid", "Where to save the midi message")
+	norestsPtr := flag.Bool("norests", false, "Should not use rests")
+	flag.Parse()
+
+	text = strings.Join(flag.Args(), " ")
+
+	return *pathPtr, text, *norestsPtr
 }
 
 func main() {
-	m, _ := text2morse("MORSE CODE")
-	seq := morse2sequence(m)
-	for _, sig := range seq {
-		if sig {
-			fmt.Print("+")
-		} else {
-			fmt.Print(" ")
-		}
-	}
-	fmt.Println()
-	fmt.Println("===.===...===.===.===...=.===.=...=.=.=...=.......===.=.===.=...===.===.===...===.=.=...=")
+	filepath, text, norests := parseArgs()
 
-	events := morse2events(seq)
-	for _, e := range events {
-		fmt.Println("Event", e)
+	m, err := text2morse(text)
+	checkErr(err)
+	events := morse2events(m, norests)
+
+	// Create division
+	ppqn := 960
+	division, err := smf.NewDivision(uint16(ppqn), smf.NOSMTPE)
+	checkErr(err)
+
+	// Create new midi struct
+	midi, err := smf.NewSMF(smf.Format0, *division)
+	checkErr(err)
+
+	// Create track struct
+	track := &smf.Track{}
+
+	// Add track to new midi struct
+	err = midi.AddTrack(track)
+	checkErr(err)
+
+	const note = 60
+	const velocity = 100
+	baseDuration := ppqn / 2
+
+	// Create some midi and meta events
+	for event := range events {
+		log.Println(event)
+		startDelta := uint32(event.Delta * baseDuration)
+		start, err := smf.NewMIDIEvent(startDelta, smf.NoteOnStatus, 0x00, note, velocity)
+		checkErr(err)
+		err = track.AddEvent(start)
+		checkErr(err)
+
+		endDelta := uint32(event.Duration * baseDuration)
+		end, err := smf.NewMIDIEvent(endDelta, smf.NoteOffStatus, 0x00, note, 0)
+		checkErr(err)
+		err = track.AddEvent(end)
+		checkErr(err)
+	}
+	metaEventOne, err := smf.NewMetaEvent(0, smf.MetaEndOfTrack, []byte{})
+	checkErr(err)
+	err = track.AddEvent(metaEventOne)
+	checkErr(err)
+
+	// Save to new midi source file
+	outputMidi, err := os.Create(filepath)
+	checkErr(err)
+	defer outputMidi.Close()
+
+	// Create buffering stream
+	writer := bufio.NewWriter(outputMidi)
+	smfio.Write(writer, midi)
+	writer.Flush()
+}
+
+func checkErr(err error) {
+	if err != nil {
+		log.Fatalln(err)
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestHello(t *testing.T) {
+func TestSequence(t *testing.T) {
 	expected := "===.===...===.===.===...=.===.=...=.=.=...=.......===.=.===.=...===.===.===...===.=.=...="
 
 	m, _ := text2morse("MORSE CODE")
@@ -26,4 +26,8 @@ func TestHello(t *testing.T) {
 	if actual != expected {
 		require.Equal(t, actual, expected)
 	}
+}
+
+func TestEvent(t *testing.T) {
+
 }
