@@ -15,5 +15,6 @@
 # vendor/
 
 *.mid
+*.midi
 *.ly
 *.pdf

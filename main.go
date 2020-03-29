@@ -29,46 +29,52 @@ type event struct {
 
 func morse2events(morseCode string, norests bool) <-chan event {
 	out := make(chan event)
+	morseCode = strings.ReplaceAll(morseCode, " / ", "/")
 	go func() {
-		var offset int
+		log.Printf("Evaluating morse code: %v", morseCode)
+		var lastnote, spaces int
 		for i, x := range morseCode {
 			if norests {
 				switch x {
 				case '/':
-					fallthrough
+					spaces = 7 - 1 - 1
 				case ' ':
-					offset = 1 + i - 2
+					spaces = 3 - 1 - 1
 				case '.':
 					out <- event{
-						Delta:    i - offset,
+						Delta:    i - lastnote + spaces,
 						Duration: 2,
 					}
-					offset = i + 1
+					lastnote = i + 1
+					spaces = 0
 				case '-':
 					out <- event{
-						Delta:    i - offset,
+						Delta:    i - lastnote + spaces,
 						Duration: 4,
 					}
-					offset = i + 1
+					lastnote = i + 1
+					spaces = 0
 				}
 			} else {
 				switch x {
 				case '/':
-					offset = 1 + i - 1
+					spaces = 7 - 1
 				case ' ':
-					offset = 1 + i - 3
+					spaces = 3 - 1
 				case '.':
 					out <- event{
-						Delta:    i - offset,
+						Delta:    i - lastnote + spaces,
 						Duration: 1,
 					}
-					offset = i
+					lastnote = i + 1
+					spaces = 1
 				case '-':
 					out <- event{
-						Delta:    i - offset,
+						Delta:    i - lastnote + spaces,
 						Duration: 3,
 					}
-					offset = i
+					lastnote = i + 1
+					spaces = 1
 				}
 			}
 		}
@@ -78,12 +84,12 @@ func morse2events(morseCode string, norests bool) <-chan event {
 }
 func parseArgs() (filepath, text string, norests bool) {
 	pathPtr := flag.String("file", "morse.mid", "Where to save the midi message")
-	norestsPtr := flag.Bool("norests", false, "Should not use rests")
+	restsPtr := flag.Bool("r", false, "Put rests between notes")
 	flag.Parse()
 
 	text = strings.Join(flag.Args(), " ")
 
-	return *pathPtr, text, *norestsPtr
+	return *pathPtr, text, !*restsPtr
 }
 
 func main() {
