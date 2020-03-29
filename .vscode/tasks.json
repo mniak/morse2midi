@@ -4,12 +4,29 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "echo",
+            "label": "Build Linux x64",
             "type": "shell",
-            "command": "go test ${workspaceFolder}",
             "group": {
-                "kind": "test",
+                "kind": "build",
                 "isDefault": true
+            },
+            "command": "go build -o morse2midi-linux-x64 ${workspaceFolder}",
+            "options": {
+                "env": {
+                    "GOOS": "linux",
+                    "GOARCH": "amd64",
+                }
+            }
+        },
+        {
+            "label": "Build Windows x64",
+            "type": "shell",
+            "command": "go build -o morse2midi-windows-x64.exe ${workspaceFolder}",
+            "options": {
+                "env": {
+                    "GOOS": "windows",
+                    "GOARCH": "amd64",
+                }
             }
         }
     ]

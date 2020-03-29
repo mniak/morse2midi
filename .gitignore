@@ -18,3 +18,5 @@
 *.midi
 *.ly
 *.pdf
+
+*morse2midi*
