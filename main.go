@@ -83,7 +83,7 @@ func morse2events(morseCode string, norests bool) <-chan event {
 	return out
 }
 func parseArgs() (filepath, text string, norests bool) {
-	pathPtr := flag.String("file", "morse.mid", "Where to save the midi message")
+	pathPtr := flag.String("o", "morse.mid", "Where to save the midi file")
 	restsPtr := flag.Bool("r", false, "Put rests between notes")
 	flag.Parse()
 
